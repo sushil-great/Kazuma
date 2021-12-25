@@ -16,7 +16,7 @@ import database as sql
 def steal(update, context):
     msg = update.effective_message
     user = update.effective_user
-    tempsticker = f"{str(user.id)}.png"
+    tempsticker = f'{user.id}.png'
     if not msg.reply_to_message:
         reply(msg, s.STEAL_NOT_REPLY)
         return
@@ -130,7 +130,6 @@ def stealpack(update, context):
                 newpack(msg, user, tempsticker, sticker.emoji, packname, packid, False, replymsg, context.bot)
             else:
                 skipped = True
-                pass
         finally: 
             stickerfile.close()
             os.system('del '+tempsticker)
@@ -146,15 +145,14 @@ def stealpack(update, context):
 
 def newpack(msg, user, tempsticker, emoji, packname, packid, sendreply, replymsg, bot):
     try:
-        stickerfile = open(tempsticker, 'rb')
-        replymsg.edit_text(s.NEW_PACK, parse_mode=ParseMode.MARKDOWN)
-        if tempsticker.endswith('png'):
-            bot.createNewStickerSet(user.id, packid, packname, png_sticker=stickerfile, emojis=emoji, timeout=9999)
-        else:
-            bot.createNewStickerSet(user.id, packid, packname, tgs_sticker=stickerfile, emojis=emoji, timeout=9999)
-        default = 0 if sql.get_default_pack(user.id) else 1
-        sql.new_pack(packid, user.id, default, packname)
-        stickerfile.close()
+        with open(tempsticker, 'rb') as stickerfile:
+            replymsg.edit_text(s.NEW_PACK, parse_mode=ParseMode.MARKDOWN)
+            if tempsticker.endswith('png'):
+                bot.createNewStickerSet(user.id, packid, packname, png_sticker=stickerfile, emojis=emoji, timeout=9999)
+            else:
+                bot.createNewStickerSet(user.id, packid, packname, tgs_sticker=stickerfile, emojis=emoji, timeout=9999)
+            default = 0 if sql.get_default_pack(user.id) else 1
+            sql.new_pack(packid, user.id, default, packname)
     except TelegramError as e:
         if e.message == "Sticker set name is already occupied": 
             replymsg.edit_text(s.PACK_ALREADY_EXISTS.format(packid), parse_mode=ParseMode.MARKDOWN)
@@ -172,7 +170,7 @@ def newpack(msg, user, tempsticker, emoji, packname, packid, sendreply, replymsg
             print(e)
     else:
         if sendreply: 
-            replymsg.edit_text(s.NEW_PACK_CREATED.format(packid), parse_mode=ParseMode.MARKDOWN)    
+            replymsg.edit_text(s.NEW_PACK_CREATED.format(packid), parse_mode=ParseMode.MARKDOWN)
     finally:
         reply(msg, None, replymsg)
 
@@ -210,7 +208,9 @@ def delsticker(update, context):
     if not msg.reply_to_message.sticker:
         reply(msg, s.DELETE_NOT_REPLY)
         return
-    if not msg.reply_to_message.sticker.set_name in str(sql.list_packs(update.effective_user.id)):
+    if msg.reply_to_message.sticker.set_name not in str(
+        sql.list_packs(update.effective_user.id)
+    ):
         reply(msg, s.NOT_YOUR_PACK)
         return
     try: 
@@ -228,7 +228,9 @@ def delpack(update, context):
     
 def setposition(update, context):
     msg = update.effective_message
-    if not msg.reply_to_message.sticker.set_name in str(sql.list_packs(update.effective_user.id)):
+    if msg.reply_to_message.sticker.set_name not in str(
+        sql.list_packs(update.effective_user.id)
+    ):
         reply(msg, s.NOT_YOUR_PACK)
         return
     try: 
@@ -272,9 +274,7 @@ def mypacks(update, context):
     if checkpacks(context.bot, packs): 
         packs = sql.list_packs(user.id)
     blank = packlist
-    count = 0
-    for pack in packs:
-        count += 1
+    for count, pack in enumerate(packs, start=1):
         if pack == defpack[0]:
             packlist += f"\n*{count}.* [{pack[3]}](t.me/addstickers/{pack[0]}) ✓"
         else:
